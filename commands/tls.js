@@ -17,7 +17,7 @@ You must verify ownership of DOMAIN after running this command. \n\
 Valid VERIFICATION_TYPES: dns\n\
   DNS: Create a DNS TXT record with the provided metatag via your DNS provider. \n\
 Usage: \n\
-  heroku fastly:tls www.example.org dns --app my-fast-app\n ',
+  heroku fastly:tls www.example.org --app my-fast-app\n ',
   needsApp: true,
   needsAuth: true,
   args: [{ name: 'domain', description: 'The domain for TLS configure' }],
@@ -45,15 +45,18 @@ Usage: \n\
       }
 
       if (context.flags.delete) {
+
+        const form = {
+          domain: context.args.domain,
+          service_id: config.FASTLY_SERVICE_ID, // eslint-disable-line camelcase
+        }
+
         request(
           {
             method: 'DELETE',
             url: `${baseUri}/plugin/heroku/tls`,
             headers: { 'Fastly-Key': apiKey, 'Content-Type': 'application/json' },
-            form: {
-              domain: context.args.domain,
-              service_id: config.FASTLY_SERVICE_ID, // eslint-disable-line camelcase
-            },
+            form,
           },
           function(err, response, body) {
             if (response.statusCode != 200) {
@@ -72,12 +75,15 @@ Usage: \n\
             }
           }
         )
+
       } else {
+
         const form = {
           domain: context.args.domain,
           verification_type: 'dns', // eslint-disable-line camelcase
           service_id: config.FASTLY_SERVICE_ID, // eslint-disable-line camelcase
         }
+
         request(
           {
             method: 'POST',
@@ -126,6 +132,7 @@ Usage: \n\
             }
           }
         )
+
       }
     })
   }),
