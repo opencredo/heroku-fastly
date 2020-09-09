@@ -11,4 +11,8 @@ describe('fastly', function () {
     index.commands[1].command.should.equal('tls');
   });
 
+  it('has a verify command', function () {
+    index.commands[2].command.should.equal('verify');
+  });
+
 });
