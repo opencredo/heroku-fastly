@@ -1,7 +1,8 @@
 'use strict'
 const hk = require('heroku-cli-util')
-const request = require('request')
+const fetch = require('node-fetch');
 const co = require('co')
+var jp = require('jsonpath');
 
 module.exports = {
 
@@ -22,46 +23,19 @@ module.exports = {
     return co(function* () {
 
       let baseUri = context.flags.api_uri || 'https://api.fastly.com'
-      let subscriptionUri = `${baseUri}/tls/subscriptions`
-
       let config = yield heroku.get(`/apps/${context.app}/config-vars`)
       let apiKey = context.flags.api_key || config.FASTLY_API_KEY
+      let domain = context.args.domain
 
       validateAPIKey(apiKey)
 
       if (context.flags.delete) {
 
-
-        let tlsSubscriptionId = config.FASTLY_TLS_SUBSCRIPTION_ID
-        validateTlsSubscriptionId(tlsSubscriptionId)
-
-        deleteFastlyTlsSubscription(apiKey, subscriptionUri, tlsSubscriptionId, function(error, response, body) {
-          if (response.statusCode != 200) {
-
-            handleErrors(response, body)
-
-          } else {
-
-            heroku.patch(`/apps/${context.app}/config-vars`, {body: {FASTLY_TLS_SUBSCRIPTION_ID: null}}).then(app => {
-              hk.styledHeader(`Domain ${context.args.domain} TLS removed. This domain will no longer support TLS`)
-            })
-
-          }
-        })
+        deleteFastlyTlsSubscription(apiKey, baseUri, domain)
 
       } else {
 
-        createFastlyTlsSubscription(apiKey, subscriptionUri, context.args.domain, function(error, response, body) {
-          if (response.statusCode != 200) {
-
-            handleErrors(response, body)
-
-          } else {
-
-            hk.styledHeader(`Domain ${context.args.domain} TLS created. This domain will no longer support TLS`)
-          }
-          console.log(response.body)
-        })
+        createFastlyTlsSubscription(apiKey, baseUri, domain)
 
       }
     })
@@ -76,18 +50,126 @@ function validateAPIKey(apiKey) {
   }
 }
 
-function validateTlsSubscriptionId(tlsSubscriptionId) {
+function createFastlyTlsSubscription(apiKey, baseUri, domain) {
 
-  if (!tlsSubscriptionId) {
-    hk.error('config var FASTLY_TLS_SUBSCRIPTION_ID not found! An existing TLS Subscription must be present to delete it.')
-    process.exit(1)
-  }
+  const options = {
+    method: 'post',
+    headers: {
+      'Accept': 'application/vnd.api+json',
+      'Content-Type': ['application/vnd.api+json'],
+      'Fastly-Key': apiKey,
+    },
+    body: JSON.stringify({
+      data: {
+        type: "tls_subscription",
+        attributes: {
+          certificate_authority: "lets-encrypt"
+        },
+        relationships: {
+          tls_domains: {
+            data: [
+              { type: "tls_domain", id: domain }
+            ]
+          },
+          tls_configuration: {
+            data: {}
+          }
+        }
+      }
+    })
+  };
+
+  (async () => {
+    try {
+      const response = await fetch(`${baseUri}/tls/subscriptions`, options);
+      const data = await response.json()
+
+      if (!response.ok) {
+        processError(response.status, response.statusText, data)
+      }
+
+      processCreateResponse(data, domain)
+
+    } catch (error) {
+      hk.error(`Fastly Plugin execution error - ${error.name} - ${error.message}`);
+      process.exit(1);
+    }
+
+  })();
 }
 
-function handleErrors(response, body) {
+function deleteFastlyTlsSubscription(apiKey, baseUri, domain) {
 
-  let errors = JSON.parse(body).errors
-  let errorMessage = `Fastly API request Error - code: ${response.statusCode} ${response.statusMessage}\n`
+  const options = {
+    headers: {
+      'Accept': 'application/vnd.api+json',
+      'Content-Type': ['application/vnd.api+json'],
+      'Fastly-Key': apiKey,
+    },
+  };
+
+  (async () => {
+    try {
+      // 1. Get a list of domains and locate the record for our current domain
+      const domainResponse = await fetch(`${baseUri}/tls/domains`, options);
+      const domainData = await domainResponse.json()
+
+      if (!domainResponse.ok) {
+        processError(domainResponse.status, domainResponse.statusText, domainData)
+      }
+
+
+
+      // 2. Delete the activations against the domain.
+      options.method = 'DELETE'
+      const activationResponse = await fetch(`${baseUri}/tls/activations/${tlsActivationId}`, options);
+      const activationData = await activationResponse.json()
+
+
+
+      if (!activationResponse.ok) {
+        processError(activationResponse.status, activationResponse.statusText, activationData)
+      }
+
+      // 3. Delete the subscrption.
+      options.method = 'DELETE'
+      const response = await fetch(`${baseUri}/tls/subscriptions/tlsSubscriptionId`, options);
+      const data = await response.json()
+
+      if (!response.ok) {
+        processError(response.status, response.statusText, data)
+      }
+
+      processDeleteResponse(data, domain)
+
+    } catch (error) {
+      hk.error(`Fastly Plugin execution error - ${error.name} - ${error.message}`);
+      process.exit(1);
+    }
+
+  })();
+
+}
+
+function processCreateResponse(data, domain) {
+
+  let acmeChallenge = jp.query(data, '$.included[*].attributes.challenges[?(@.type == \'managed-dns\')]')[0];
+  let cnameChallenge = jp.query(data, '$.included[*].attributes.challenges[?(@.type == \'managed-http-cname\')]')[0];
+  let aChallenge = jp.query(data, '$.included[*].attributes.challenges[?(@.type == \'managed-http-a\')]')[0];
+
+  hk.styledHeader(`Domain ${domain} has been queued for TLS certificate addition. This may take a few minutes.\n`);
+  hk.styledHeader(`To start the domain verification process create a DNS ${acmeChallenge.record_type} record.\n`)
+  hk.log(`${acmeChallenge.record_type} ${acmeChallenge.record_name} ${acmeChallenge.values[0]}\n`);
+
+  hk.styledHeader(`Alongside the initial verification record either the following CNAME and/or A records are required.\n`);
+  hk.log(`${cnameChallenge.record_type} ${cnameChallenge.record_name} ${cnameChallenge.values[0]}\n`);
+  hk.log(`${aChallenge.record_type} ${aChallenge.record_name} ${aChallenge.values[0]}, ${aChallenge.values[1]}, ${aChallenge.values[2]}, ${aChallenge.values[3]}`);
+}
+
+function processError(status, statusText, data) {
+
+  let errors = data.errors
+  let errorMessage = `Fastly API request Error - code: ${status} ${statusText}\n`
 
   for (var i = 0; i < errors.length; i++) {
     errorMessage += `${errors[i].title} - ${errors[i].detail}\n`
@@ -95,52 +177,4 @@ function handleErrors(response, body) {
 
   hk.error(errorMessage.trim())
   process.exit(1)
-}
-
-function createFastlyTlsSubscription(apiKey, subscriptionUri, domain, callback) {
-
-  request(
-    subscriptionUri,
-    {
-      method: 'POST',
-      'headers': {
-        'Accept': 'application/vnd.api+json',
-        'Content-Type': ['application/vnd.api+json'],
-        'Fastly-Key': apiKey,
-      },
-      'body': JSON.stringify({
-        data: {
-          type: "tls_subscription",
-          attributes: {
-            certificate_authority: "lets-encrypt"
-          },
-          relationships: {
-            tls_domains: {
-              data: [
-                { type: "tls_domain", id: domain }
-              ]
-            },
-            tls_configuration: {
-              data: {}
-            }
-          }
-        }
-      }),
-    },
-    callback)
-}
-
-function deleteFastlyTlsSubscription(apiKey, subscriptionUri, tlsSubscriptionId, callback) {
-
-  request(
-    `${subscriptionUri}/${tlsSubscriptionId}`,
-    {
-      method: 'DELETE',
-      'headers': {
-        'Accept': 'application/vnd.api+json',
-        'Content-Type': ['application/vnd.api+json'],
-        'Fastly-Key': apiKey,
-      },
-    },
-    callback)
 }
