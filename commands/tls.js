@@ -110,36 +110,45 @@ function deleteFastlyTlsSubscription(apiKey, baseUri, domain) {
 
   (async () => {
     try {
+
       // 1. Get a list of domains to locate activation and subscription ids.
       const domainResponse = await fetch(`${baseUri}/tls/domains`, options);
-      const domainData = await domainResponse.json()
+      const domainData = await domainResponse.json();
 
       if (!domainResponse.ok) {
-        processError(domainResponse.status, domainResponse.statusText, domainData)
+        processError(domainResponse.status, domainResponse.statusText, domainData);
       }
 
-      let tlsActivationId = jp.query(domainData, `$.[?(@.id == \'${domain}\')].relationships.tls_activations.[*].id`)
-      let tlsSubscriptionId = jp.query(domainData, `$.[?(@.id == \'${domain}\')].relationships.tls_subscriptions.[*].id`)[0];
+      let tlsActivationId = jp.query(domainData, `$.data[?(@.id == \'${domain}\')].relationships.tls_activations.data[0].id`)
+      let tlsSubscriptionId = jp.query(domainData, `$.data[?(@.id == \'${domain}\')].relationships.tls_subscriptions.data[0].id`);
 
       // 2. Delete the activations against the domain.
-      options.method = 'DELETE'
-      const activationResponse = await fetch(`${baseUri}/tls/activations/${tlsActivationId}`, options);
-      const activationData = await activationResponse.json()
+      if(!tlsActivationId) {
+        options.method = 'DELETE';
+        const activationResponse = await fetch(`${baseUri}/tls/activations/${tlsActivationId}`, options);
 
-      if (!activationResponse.ok) {
-        processError(activationResponse.status, activationResponse.statusText, activationData);
+        if (!activationResponse.ok) {
+          const activationData = await activationResponse.json();
+          processError(activationResponse.status, activationResponse.statusText, activationData);
+        }
+      } else {
+        hk.warn(`TLS was not activate on domain ${domain}.`);
       }
 
       // 3. Delete the subscription against the domain.
-      options.method = 'DELETE'
-      const response = await fetch(`${baseUri}/tls/subscriptions/${tlsSubscriptionId}`, options);
-      const data = await response.json()
+      if(!tlsSubscriptionId) {
+        options.method = 'DELETE';
+        const response = await fetch(`${baseUri}/tls/subscriptions/${tlsSubscriptionId}`, options);
 
-      if (!response.ok) {
-        processError(response.status, response.statusText, data)
+        if (!response.ok) {
+          const data = await response.json();
+          processError(response.status, response.statusText, data);
+        }
+
+        processDeleteResponse(domain);
+      } else {
+        hk.warn(`Domain ${domain} does not support TLS.`);
       }
-
-      processDeleteResponse(data, domain)
 
     } catch (error) {
       hk.error(`Fastly Plugin execution error - ${error.name} - ${error.message}`);
@@ -165,17 +174,20 @@ function processCreateResponse(data, domain) {
   hk.log(`${aChallenge.record_type} ${aChallenge.record_name} ${aChallenge.values[0]}, ${aChallenge.values[1]}, ${aChallenge.values[2]}, ${aChallenge.values[3]}`);
 }
 
-function processDeleteResponse(data, domain) {
+function processDeleteResponse(domain) {
 
+  hk.styledHeader(`Domain ${domain} queued for TLS removal. This domain will no longer support TLS`);
 }
 
 function processError(status, statusText, data) {
 
-  let errors = data.errors
   let errorMessage = `Fastly API request Error - code: ${status} ${statusText}\n`
 
-  for (var i = 0; i < errors.length; i++) {
-    errorMessage += `${errors[i].title} - ${errors[i].detail}\n`
+  if (data != null) {
+    let errors = data.errors
+    for (var i = 0; i < errors.length; i++) {
+      errorMessage += `${errors[i].title} - ${errors[i].detail}\n`
+    }
   }
 
   hk.error(errorMessage.trim())
