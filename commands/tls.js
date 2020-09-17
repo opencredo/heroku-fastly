@@ -110,7 +110,7 @@ function deleteFastlyTlsSubscription(apiKey, baseUri, domain) {
 
   (async () => {
     try {
-      // 1. Get a list of domains and locate the record for our current domain
+      // 1. Get a list of domains to locate activation and subscription ids.
       const domainResponse = await fetch(`${baseUri}/tls/domains`, options);
       const domainData = await domainResponse.json()
 
@@ -118,22 +118,21 @@ function deleteFastlyTlsSubscription(apiKey, baseUri, domain) {
         processError(domainResponse.status, domainResponse.statusText, domainData)
       }
 
-
+      let tlsActivationId = jp.query(domainData, `$.[?(@.id == \'${domain}\')].relationships.tls_activations.[*].id`)
+      let tlsSubscriptionId = jp.query(domainData, `$.[?(@.id == \'${domain}\')].relationships.tls_subscriptions.[*].id`)[0];
 
       // 2. Delete the activations against the domain.
       options.method = 'DELETE'
       const activationResponse = await fetch(`${baseUri}/tls/activations/${tlsActivationId}`, options);
       const activationData = await activationResponse.json()
 
-
-
       if (!activationResponse.ok) {
-        processError(activationResponse.status, activationResponse.statusText, activationData)
+        processError(activationResponse.status, activationResponse.statusText, activationData);
       }
 
-      // 3. Delete the subscrption.
+      // 3. Delete the subscription against the domain.
       options.method = 'DELETE'
-      const response = await fetch(`${baseUri}/tls/subscriptions/tlsSubscriptionId`, options);
+      const response = await fetch(`${baseUri}/tls/subscriptions/${tlsSubscriptionId}`, options);
       const data = await response.json()
 
       if (!response.ok) {
@@ -164,6 +163,10 @@ function processCreateResponse(data, domain) {
   hk.styledHeader(`Alongside the initial verification record either the following CNAME and/or A records are required.\n`);
   hk.log(`${cnameChallenge.record_type} ${cnameChallenge.record_name} ${cnameChallenge.values[0]}\n`);
   hk.log(`${aChallenge.record_type} ${aChallenge.record_name} ${aChallenge.values[0]}, ${aChallenge.values[1]}, ${aChallenge.values[2]}, ${aChallenge.values[3]}`);
+}
+
+function processDeleteResponse(data, domain) {
+
 }
 
 function processError(status, statusText, data) {
