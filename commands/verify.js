@@ -1,13 +1,13 @@
 'use strict'
-const cli = require('heroku-cli-util')
-const request = require('request')
+const hk = require('heroku-cli-util')
+const fetch = require('node-fetch');
 const co = require('co')
+const jp = require('jsonpath');
 
 module.exports = {
   topic: 'fastly',
   command: 'verify',
-  description:
-    'Start domain verification for DOMAIN after successfully running `fastly:tls` and configuring verification metatag in DNS.',
+  description: 'check on the status of the Fastly TLS subscription',
   help:
     'This validates the metatag you set as a DNS TXT record or as metatag in the html of your root page.',
   needsApp: true,
@@ -30,86 +30,90 @@ module.exports = {
     },
     { name: 'api_uri', char: 'u', description: 'Override Fastly API URI', hasValue: true },
   ],
-  run: cli.command(function(context, heroku) {
+  run: hk.command(function(context, heroku) {
     return co(function*() {
+
       let baseUri = context.flags.api_uri || 'https://api.fastly.com'
       let config = yield heroku.get(`/apps/${context.app}/config-vars`)
       let apiKey = context.flags.api_key || config.FASTLY_API_KEY
+      let domain = context.args.domain
 
-      if (!apiKey) {
-        cli.error(
-          'config var FASTLY_API_KEY not found! The Fastly add-on is required to configure TLS. Install Fastly at https://elements.heroku.com/addons/fastly'
-        )
-        process.exit(1)
-      }
+      validateAPIKey(apiKey);
 
-      const urlParams = `?domain=${context.args.domain}&service_id=${config.FASTLY_SERVICE_ID}`
-      const url = `${baseUri}/plugin/heroku/tls/status${urlParams}`
+      verifyFastlyTlsSubscription(apiKey, baseUri, domain);
 
-      if (context.args.verification_action.toLowerCase() == 'start') {
-        request.get({ url, headers: { 'Fastly-Key': apiKey } }, function(error, response, body) {
-          if (!error && response.statusCode == 200) {
-            let json = JSON.parse(body)
-            cli.warn(`Valid approval domains: ${json.metadata.valid_approvals.toString()}`)
 
-            cli
-              .prompt('Type the approval domain to use (or ENTER if only 1): ')
-              .then(function(approval) {
-                let valid = json.metadata.valid_approvals.indexOf(approval)
-
-                if (valid == -1) {
-                  cli.error('Entered domain does not match a valid approval. Try again')
-                  process.exit(1)
-                }
-
-                request(
-                  {
-                    method: 'POST',
-                    url: `${baseUri}/plugin/heroku/tls/verify`,
-                    headers: { 'Fastly-Key': apiKey },
-                    form: {
-                      approval,
-                      domain: context.args.domain,
-                      service_id: config.FASTLY_SERVICE_ID, // eslint-disable-line camelcase
-                    },
-                  },
-                  function(err, response, body) {
-                    if (!error && response.statusCode == 200) {
-                      cli.warn(
-                        "Domain queued for verification. This may take up to 30 minutes. To check the status, run 'heroku fastly:verify status DOMAIN --app APP'"
-                      )
-                    } else {
-                      cli.error(body)
-                    }
-                  }
-                )
-              })
-          } else {
-            cli.error(body)
-          }
-        })
-      }
-
-      if (context.args.verification_action.toLowerCase() == 'status') {
-        request.get({ url, headers: { 'Fastly-Key': apiKey } }, function(error, response, body) {
-          if (!error && response.statusCode == 200) {
-            let json = JSON.parse(body)
-            cli.warn(`Status: ${json.state}`)
-            if (json.state == 'issued') {
-              cli.warn(
-                'Your certificate has been issued. It could take up to an hour for the certificate to propagate globally.\n'
-              )
-              cli.warn('To use the certificate configure the following CNAME record: \n')
-              const [{ cname }] = json.dns
-              cli.warn(`CNAME  ${context.args.domain}  ${cname}`)
-            } else {
-              cli.warn('Your cert has not yet been issued. Please try again shortly.')
-            }
-          } else {
-            cli.error(body)
-          }
-        })
-      }
     })
   }),
+}
+
+function verifyFastlyTlsSubscription(apiKey, baseUri, domain) {
+
+  const options = {
+    headers: {
+      'Accept': 'application/vnd.api+json',
+      'Content-Type': ['application/vnd.api+json'],
+      'Fastly-Key': apiKey,
+    },
+  };
+
+  (async () => {
+    try {
+
+      // 1. Get a list of domains to locate subscription id.
+      const domainResponse = await fetch(`${baseUri}/tls/domains`, options);
+      const domainData = await domainResponse.json();
+
+      if (!domainResponse.ok) {
+        processError(domainResponse.status, domainResponse.statusText, domainData);
+      }
+
+      let tlsSubscriptionId = jp.query(domainData, `$.data[?(@.id == \'${domain}\')].relationships.tls_subscriptions.data[0].id`);
+
+      // 2. Locate the current state of the TLS subscription.
+      if(tlsSubscriptionId) {
+        options.method = 'GET';
+        const response = await fetch(`${baseUri}/tls/subscriptions/${tlsSubscriptionId}`, options);
+        const data = await response.json();
+
+        if (!response.ok) {
+
+          processError(response.status, response.statusText, data);
+        }
+
+        processVerifyResponse(data, domain);
+      } else {
+        hk.warn(`Domain ${domain} does not support TLS.`);
+      }
+
+    } catch (error) {
+      hk.error(`Fastly Plugin execution error - ${error.name} - ${error.message}`);
+      process.exit(1);
+    }
+
+  })();
+
+}
+
+function validateAPIKey(apiKey) {
+
+  if (!apiKey) {
+    hk.error('config var FASTLY_API_KEY not found! The Fastly add-on is required to configure TLS. Install Fastly at https://elements.heroku.com/addons/fastly')
+    process.exit(1)
+  }
+}
+
+function processVerifyResponse(data, domain) {
+
+  let status = jp.query(data, `$['data']['attributes'].state`);
+
+  hk.styledHeader(`Domain ${domain} TLS subscription state: ${status}`);
+
+  if(status == 'issued'){
+    hk.log(`Domain ${domain} now supports TLS.`);
+  } else {
+    hk.log(`The issuing of a certificate may take up to 30 minutes.  In the mean time please confirm your DNS records are configured with your DNS provider for ${domain}`);
+  }
+
+  hk.log();
 }

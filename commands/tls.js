@@ -2,7 +2,7 @@
 const hk = require('heroku-cli-util')
 const fetch = require('node-fetch');
 const co = require('co')
-var jp = require('jsonpath');
+const jp = require('jsonpath');
 
 module.exports = {
 
