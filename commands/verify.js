@@ -95,7 +95,7 @@ function processVerifyResponse(data, domain) {
 
   hk.styledHeader(`Domain ${domain} TLS subscription state: ${status}`);
 
-  if(status == 'issued'){
+  if(status === 'issued'){
     hk.log(`Domain ${domain} now supports TLS.`);
   } else {
     hk.log(`The issuing of a certificate may take up to 30 minutes.  In the mean time please confirm your DNS records are configured with your DNS provider for ${domain}`);
