@@ -9,7 +9,13 @@ module.exports = {
   topic: 'fastly',
   command: 'tls',
   description: 'Add/Remove Fastly TLS to DOMAIN',
-  help: 'TODO - Update documentation to reflect the use of tls/subscriptions',
+  help: 'DOMAIN will be added to a Fastly Heroku SAN SSL certificate. \n\n\
+Requirements: \n\
+ - The Fastly Service must have DOMAIN configured in the active version \n\
+ - Heroku pricing plan must include TLS Domain(s) \n\
+ - Wildcard domains are not allowed \n\n\
+Usage: \n\
+  heroku fastly:tls www.example.org --app my-fast-app\n ',
   needsApp: true,
   needsAuth: true,
   args: [{ name: 'domain', description: 'The domain for TLS configure' }],

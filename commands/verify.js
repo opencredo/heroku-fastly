@@ -7,28 +7,16 @@ const jp = require('jsonpath');
 module.exports = {
   topic: 'fastly',
   command: 'verify',
-  description: 'check on the status of the Fastly TLS subscription',
-  help:
-    'This validates the metatag you set as a DNS TXT record or as metatag in the html of your root page.',
+  description: 'Check the status of the Fastly TLS subscription.',
+  help: 'A command that allows the status of the Fastly TLS subscription to be checked.',
   needsApp: true,
   needsAuth: true,
   args: [
-    {
-      name: 'verification_action',
-      description:
-        'Start the verification process, check on its status, or confirm its completion.',
-      optional: false,
-    },
-    { name: 'domain', description: 'The domain to verify', optional: false },
+    { name: 'domain', description: 'The domain to check', optional: false },
   ],
   flags: [
-    {
-      name: 'api_key',
-      char: 'k',
-      description: 'Override Fastly_API_KEY config var',
-      hasValue: true,
-    },
     { name: 'api_uri', char: 'u', description: 'Override Fastly API URI', hasValue: true },
+    { name: 'api_key', char: 'k', description: 'Override Fastly_API_KEY config var', hasValue: true },
   ],
   run: hk.command(function(context, heroku) {
     return co(function*() {
@@ -41,8 +29,6 @@ module.exports = {
       validateAPIKey(apiKey);
 
       verifyFastlyTlsSubscription(apiKey, baseUri, domain);
-
-
     })
   }),
 }
