@@ -19,7 +19,7 @@ To add TLS to a domain your pricing plan must include a TLS domain and the domai
 The process involves creating the TLS Domain, verifying ownership of your domain, and checking the verification status of your domain. Usage:
 
 ```
-heroku fastly:tls DOMAIN [VERIFICATION_TYPE]
+heroku fastly:tls DOMAIN --app [HEROKU_APP_NAME]
 ```
 
 To add TLS/SSL to a custom domain:
@@ -27,19 +27,17 @@ To add TLS/SSL to a custom domain:
 ```
 heroku fastly:tls www.example.org --app my-fast-app
 ```
-Create a DNS TXT record with the verification string output from this command.
+The output of add TLS/SSL command will provide the required DNS record values that need to be 
+add to your DNS provider configuration.  These include the acme challenge as well as A/CNAME record entries.
 
 ```
-heroku fastly:verify start www.example.org --app my-fast-app
+heroku fastly:verify www.example.org
 ```
-Verfies ownership of the domain via the DNS TXT record added from output of the previous command.
-
+Verifies the state of the add TLS/SSL request.
 
 ```
-heroku fastly:verify status www.example.org --app my-fast-app
+heroku fastly:verify www.example.org
 ```
-Checks the status of the verification process. If complete, a new CNAME will be output that you can update to after the new certificate propagates to all caches.
-
 
 To remove TLS/SSL from a custom domain, include the the `-d` flag:
 
@@ -99,7 +97,7 @@ heroku-fastly 1.0.7 (link) /Users/your-path/heroku-fastly
  ▸    $ heroku fastly:verify start DOMAIN —app APP
  ```
 
-* Test `verify` command. Run `heroku fastly:verify start www.example.org --app my-fast-app`, will return something like: 
+* Test `verify` command. Run `heroku fastly:verify www.example.org`, will return something like: 
 
 ```
  ▸    Valid approval domains: example.org, www.example.org
