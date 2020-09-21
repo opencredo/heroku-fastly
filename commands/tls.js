@@ -129,7 +129,7 @@ function deleteFastlyTlsSubscription(apiKey, baseUri, domain) {
       let tlsSubscriptionId = jp.query(domainData, `$.data[?(@.id == \'${domain}\')].relationships.tls_subscriptions.data[0].id`);
 
       // 2. Delete the activations against the domain.
-      if(!tlsActivationId) {
+      if(tlsActivationId) {
         options.method = 'DELETE';
         const activationResponse = await fetch(`${baseUri}/tls/activations/${tlsActivationId}`, options);
 
@@ -142,7 +142,7 @@ function deleteFastlyTlsSubscription(apiKey, baseUri, domain) {
       }
 
       // 3. Delete the subscription against the domain.
-      if(!tlsSubscriptionId) {
+      if(tlsSubscriptionId) {
         options.method = 'DELETE';
         const response = await fetch(`${baseUri}/tls/subscriptions/${tlsSubscriptionId}`, options);
 
