@@ -22,7 +22,7 @@ module.exports = {
       return hk.error('You must specify `--all` or a key to purge with.')
     }
 
-    return co(function*() {
+    return co(function* () {
       let config = yield heroku.get(`/apps/${context.app}/config-vars`)
       const fastly = require('fastly')(config.FASTLY_API_KEY)
 

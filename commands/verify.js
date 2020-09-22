@@ -1,8 +1,8 @@
 'use strict'
 const hk = require('heroku-cli-util')
-const fetch = require('node-fetch');
+const fetch = require('node-fetch')
 const co = require('co')
-const jp = require('jsonpath');
+const jp = require('jsonpath')
 
 module.exports = {
   topic: 'fastly',
@@ -19,16 +19,16 @@ module.exports = {
     { name: 'api_key', char: 'k', description: 'Override Fastly_API_KEY config var', hasValue: true },
   ],
   run: hk.command(function(context, heroku) {
-    return co(function*() {
+    return co(function* () {
 
       let baseUri = context.flags.api_uri || 'https://api.fastly.com'
       let config = yield heroku.get(`/apps/${context.app}/config-vars`)
       let apiKey = context.flags.api_key || config.FASTLY_API_KEY
       let domain = context.args.domain
 
-      validateAPIKey(apiKey);
+      validateAPIKey(apiKey)
 
-      verifyFastlyTlsSubscription(apiKey, baseUri, domain);
+      verifyFastlyTlsSubscription(apiKey, baseUri, domain)
     })
   }),
 }
@@ -47,37 +47,37 @@ function verifyFastlyTlsSubscription(apiKey, baseUri, domain) {
     try {
 
       // 1. Get a list of domains to locate subscription id.
-      const domainResponse = await fetch(`${baseUri}/tls/domains`, options);
-      const domainData = await domainResponse.json();
+      const domainResponse = await fetch(`${baseUri}/tls/domains`, options)
+      const domainData = await domainResponse.json()
 
       if (!domainResponse.ok) {
-        processError(domainResponse.status, domainResponse.statusText, domainData);
+        processError(domainResponse.status, domainResponse.statusText, domainData)
       }
 
-      let tlsSubscriptionId = jp.query(domainData, `$.data[?(@.id == \'${domain}\')].relationships.tls_subscriptions.data[0].id`);
+      let tlsSubscriptionId = jp.query(domainData, `$.data[?(@.id == \'${domain}\')].relationships.tls_subscriptions.data[0].id`)
 
       // 2. Locate the current state of the TLS subscription.
-      if(tlsSubscriptionId) {
-        options.method = 'GET';
-        const response = await fetch(`${baseUri}/tls/subscriptions/${tlsSubscriptionId}`, options);
-        const data = await response.json();
+      if (tlsSubscriptionId) {
+        options.method = 'GET'
+        const response = await fetch(`${baseUri}/tls/subscriptions/${tlsSubscriptionId}`, options)
+        const data = await response.json()
 
         if (!response.ok) {
 
-          processError(response.status, response.statusText, data);
+          processError(response.status, response.statusText, data)
         }
 
-        processVerifyResponse(data, domain);
+        processVerifyResponse(data, domain)
       } else {
-        hk.warn(`Domain ${domain} does not support TLS.`);
+        hk.warn(`Domain ${domain} does not support TLS.`)
       }
 
     } catch (error) {
-      hk.error(`Fastly Plugin execution error - ${error.name} - ${error.message}`);
-      process.exit(1);
+      hk.error(`Fastly Plugin execution error - ${error.name} - ${error.message}`)
+      process.exit(1)
     }
 
-  })();
+  })()
 
 }
 
@@ -91,15 +91,15 @@ function validateAPIKey(apiKey) {
 
 function processVerifyResponse(data, domain) {
 
-  let status = jp.query(data, `$['data']['attributes'].state`);
+  let status = jp.query(data, `$['data']['attributes'].state`)
 
-  hk.styledHeader(`Domain ${domain} TLS subscription state: ${status}`);
+  hk.styledHeader(`Domain ${domain} TLS subscription state: ${status}`)
 
-  if(status === 'issued' || status === 'renewing'){
-    hk.log(`Domain ${domain} supporting TLS.`);
+  if (status === 'issued' || status === 'renewing') {
+    hk.log(`Domain ${domain} supporting TLS.`)
   } else {
-    hk.log(`The issuing of a certificate may take up to 30 minutes.  In the mean time please confirm your DNS records are configured with your DNS provider for ${domain}`);
+    hk.log(`The issuing of a certificate may take up to 30 minutes.  In the mean time please confirm your DNS records are configured with your DNS provider for ${domain}`)
   }
 
-  hk.log();
+  hk.log()
 }
