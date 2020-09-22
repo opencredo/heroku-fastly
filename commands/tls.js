@@ -1,8 +1,8 @@
 'use strict'
 const hk = require('heroku-cli-util')
-const fetch = require('node-fetch');
+const fetch = require('node-fetch')
 const co = require('co')
-const jp = require('jsonpath');
+const jp = require('jsonpath')
 
 module.exports = {
 
@@ -59,7 +59,7 @@ function validateAPIKey(apiKey) {
 function createFastlyTlsSubscription(apiKey, baseUri, domain) {
 
   const options = {
-    method: 'post',
+    method: 'POST',
     headers: {
       'Accept': 'application/vnd.api+json',
       'Content-Type': ['application/vnd.api+json'],
@@ -67,27 +67,27 @@ function createFastlyTlsSubscription(apiKey, baseUri, domain) {
     },
     body: JSON.stringify({
       data: {
-        type: "tls_subscription",
+        type: 'tls_subscription',
         attributes: {
-          certificate_authority: "lets-encrypt"
+          certificate_authority: 'lets-encrypt',
         },
         relationships: {
           tls_domains: {
             data: [
-              { type: "tls_domain", id: domain }
-            ]
+              { type: 'tls_domain', id: domain },
+            ],
           },
           tls_configuration: {
-            data: {}
-          }
-        }
-      }
-    })
+            data: {},
+          },
+        },
+      },
+    }),
   };
 
   (async () => {
     try {
-      const response = await fetch(`${baseUri}/tls/subscriptions`, options);
+      const response = await fetch(`${baseUri}/tls/subscriptions`, options)
       const data = await response.json()
 
       if (!response.ok) {
@@ -97,11 +97,11 @@ function createFastlyTlsSubscription(apiKey, baseUri, domain) {
       processCreateResponse(data, domain)
 
     } catch (error) {
-      hk.error(`Fastly Plugin execution error - ${error.name} - ${error.message}`);
-      process.exit(1);
+      hk.error(`Fastly Plugin execution error - ${error.name} - ${error.message}`)
+      process.exit(1)
     }
 
-  })();
+  })()
 }
 
 function deleteFastlyTlsSubscription(apiKey, baseUri, domain) {
@@ -118,71 +118,71 @@ function deleteFastlyTlsSubscription(apiKey, baseUri, domain) {
     try {
 
       // 1. Get a list of domains to locate activation and subscription ids.
-      const domainResponse = await fetch(`${baseUri}/tls/domains`, options);
-      const domainData = await domainResponse.json();
+      const domainResponse = await fetch(`${baseUri}/tls/domains`, options)
+      const domainData = await domainResponse.json()
 
       if (!domainResponse.ok) {
-        processError(domainResponse.status, domainResponse.statusText, domainData);
+        processError(domainResponse.status, domainResponse.statusText, domainData)
       }
 
       let tlsActivationId = jp.query(domainData, `$.data[?(@.id == \'${domain}\')].relationships.tls_activations.data[0].id`)
-      let tlsSubscriptionId = jp.query(domainData, `$.data[?(@.id == \'${domain}\')].relationships.tls_subscriptions.data[0].id`);
+      let tlsSubscriptionId = jp.query(domainData, `$.data[?(@.id == \'${domain}\')].relationships.tls_subscriptions.data[0].id`)
 
       // 2. Delete the activations against the domain.
-      if(tlsActivationId) {
-        options.method = 'DELETE';
-        const activationResponse = await fetch(`${baseUri}/tls/activations/${tlsActivationId}`, options);
+      if (tlsActivationId) {
+        options.method = 'DELETE'
+        const activationResponse = await fetch(`${baseUri}/tls/activations/${tlsActivationId}`, options)
 
         if (!activationResponse.ok) {
-          const activationData = await activationResponse.json();
-          processError(activationResponse.status, activationResponse.statusText, activationData);
+          const activationData = await activationResponse.json()
+          processError(activationResponse.status, activationResponse.statusText, activationData)
         }
       } else {
-        hk.warn(`TLS was not activate on domain ${domain}.`);
+        hk.warn(`TLS was not activate on domain ${domain}.`)
       }
 
       // 3. Delete the subscription against the domain.
-      if(tlsSubscriptionId) {
-        options.method = 'DELETE';
-        const response = await fetch(`${baseUri}/tls/subscriptions/${tlsSubscriptionId}`, options);
+      if (tlsSubscriptionId) {
+        options.method = 'DELETE'
+        const response = await fetch(`${baseUri}/tls/subscriptions/${tlsSubscriptionId}`, options)
 
         if (!response.ok) {
-          const data = await response.json();
-          processError(response.status, response.statusText, data);
+          const data = await response.json()
+          processError(response.status, response.statusText, data)
         }
 
-        processDeleteResponse(domain);
+        processDeleteResponse(domain)
       } else {
-        hk.warn(`Domain ${domain} does not support TLS.`);
+        hk.warn(`Domain ${domain} does not support TLS.`)
       }
 
     } catch (error) {
-      hk.error(`Fastly Plugin execution error - ${error.name} - ${error.message}`);
-      process.exit(1);
+      hk.error(`Fastly Plugin execution error - ${error.name} - ${error.message}`)
+      process.exit(1)
     }
 
-  })();
+  })()
 
 }
 
 function processCreateResponse(data, domain) {
 
-  let acmeChallenge = jp.query(data, '$.included[*].attributes.challenges[?(@.type == \'managed-dns\')]')[0];
-  let cnameChallenge = jp.query(data, '$.included[*].attributes.challenges[?(@.type == \'managed-http-cname\')]')[0];
-  let aChallenge = jp.query(data, '$.included[*].attributes.challenges[?(@.type == \'managed-http-a\')]')[0];
+  let acmeChallenge = jp.query(data, '$.included[*].attributes.challenges[?(@.type == \'managed-dns\')]')[0]
+  let cnameChallenge = jp.query(data, '$.included[*].attributes.challenges[?(@.type == \'managed-http-cname\')]')[0]
+  let aChallenge = jp.query(data, '$.included[*].attributes.challenges[?(@.type == \'managed-http-a\')]')[0]
 
-  hk.styledHeader(`Domain ${domain} has been queued for TLS certificate addition. This may take a few minutes.\n`);
+  hk.styledHeader(`Domain ${domain} has been queued for TLS certificate addition. This may take a few minutes.\n`)
   hk.styledHeader(`To start the domain verification process create a DNS ${acmeChallenge.record_type} record.\n`)
-  hk.log(`${acmeChallenge.record_type} ${acmeChallenge.record_name} ${acmeChallenge.values[0]}\n`);
+  hk.log(`${acmeChallenge.record_type} ${acmeChallenge.record_name} ${acmeChallenge.values[0]}\n`)
 
-  hk.styledHeader(`Alongside the initial verification record either the following CNAME and/or A records are required.\n`);
-  hk.log(`${cnameChallenge.record_type} ${cnameChallenge.record_name} ${cnameChallenge.values[0]}\n`);
-  hk.log(`${aChallenge.record_type} ${aChallenge.record_name} ${aChallenge.values[0]}, ${aChallenge.values[1]}, ${aChallenge.values[2]}, ${aChallenge.values[3]}`);
+  hk.styledHeader(`Alongside the initial verification record either the following CNAME and/or A records are required.\n`)
+  hk.log(`${cnameChallenge.record_type} ${cnameChallenge.record_name} ${cnameChallenge.values[0]}\n`)
+  hk.log(`${aChallenge.record_type} ${aChallenge.record_name} ${aChallenge.values[0]}, ${aChallenge.values[1]}, ${aChallenge.values[2]}, ${aChallenge.values[3]}`)
 }
 
 function processDeleteResponse(domain) {
 
-  hk.styledHeader(`Domain ${domain} queued for TLS removal. This domain will no longer support TLS`);
+  hk.styledHeader(`Domain ${domain} queued for TLS removal. This domain will no longer support TLS`)
 }
 
 function processError(status, statusText, data) {

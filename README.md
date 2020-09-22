@@ -30,17 +30,12 @@ heroku fastly:tls www.example.org --app my-fast-app
 The output of add TLS/SSL command will provide the required DNS record values that need to be 
 add to your DNS provider configuration.  These include the acme challenge as well as A/CNAME record entries.
 
-```
-heroku fastly:verify www.example.org
-```
 Verifies the state of the add TLS/SSL request.
-
 ```
 heroku fastly:verify www.example.org
 ```
 
 To remove TLS/SSL from a custom domain, include the the `-d` flag:
-
 ```
 heroku fastly:tls -d www.example.org --app my-fast-app
 ```
@@ -89,19 +84,24 @@ heroku-fastly 1.0.7 (link) /Users/your-path/heroku-fastly
 
 ```
 === Domain www.example.org has been queued for TLS certificate addition. This may take a few minutes.
- ▸    In the mean time, start the domain verification process by creating a DNS TXT record containing the following content:
- ▸
- ▸
- ▸    Once you have added this TXT record you can start the verification process by running:
- ▸
- ▸    $ heroku fastly:verify start DOMAIN —app APP
+
+=== To start the domain verification process create a DNS CNAME record.
+
+CNAME _acme-challenge.www.example.org lja6px7qnjrx5dgqd7.fastly-validations.com
+
+=== Alongside the initial verification record either the following CNAME and/or A records are required.
+
+CNAME www.example.org j.sni.global.fastly.net
+
+A www.example.org 151.101.2.132, 151.101.66.132, 151.101.130.132, 151.101.194.132
  ```
 
 * Test `verify` command. Run `heroku fastly:verify www.example.org`, will return something like: 
 
 ```
- ▸    Valid approval domains: example.org, www.example.org
-Type the approval domain to use (or ENTER if only 1): : ^C
+ (node:55920) [DEP0066] DeprecationWarning: OutgoingMessage.prototype._headers is deprecated
+ === Domain www.example.org TLS subscription state: pending
+ The issuing of a certificate may take up to 30 minutes.  In the mean time please confirm your DNS records are configured with your DNS provider for fastlydev.thinkcheesy.com
 ```
 
 * Test `purge` command. Run `heroku fastly:purge --all --app my-fast-app`, will return something like:
