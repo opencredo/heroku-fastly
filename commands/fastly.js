@@ -15,11 +15,11 @@ module.exports = class Fastly{
     let headers = {
       'Fastly-Key': this.apiKey,
       'Accept': 'application/vnd.api+json',
-      'Content-Type': ['application/vnd.api+json'],
+      'Content-Type': 'application/vnd.api+json',
     }
     let config = {
-      ...headers,
-      ...options
+      ...options,
+      headers: headers,
     }
 
     return fetch(url, config).then(r => {
@@ -56,43 +56,43 @@ module.exports = class Fastly{
   }
 
   getSubscription(id) {
-    let url = `/tls/subscriptions/${id}?include=tls_authorizations`
+    let endpoint = `/tls/subscriptions/${id}?include=tls_authorizations`
     const options = {
       method: 'GET',
     }
-    return this.request(url, options)
+    return this.request(endpoint, options)
   }
 
   getSubscriptions() {
-    let url = `/tls/subscriptions?include=tls_authorizations`
+    let endpoint = '/tls/subscriptions?include=tls_authorizations'
     const options = {
       method: 'GET',
     }
-    return this.request(url, options)
+    return this.request(endpoint, options)
   }
 
   deleteSubscription(id) {
-    let url = `/tls/subscriptions/${id}`
+    let endpoint = `/tls/subscriptions/${id}`
     const options = {
       method: 'DELETE',
     }
-    return this.request(url, options)
+    return this.request(endpoint, options)
   }
 
   getDomains() {
-    let url = `/tls/domains?include=tls_activations,tls_subscriptions.tls_authorizations,tls_subscriptions`
+    let endpoint = '/tls/domains?include=tls_activations,tls_subscriptions.tls_authorizations,tls_subscriptions'
     const options = {
       method: 'GET',
     }
-    return this.request(url, options)
+    return this.request(endpoint, options)
   }
 
   getActivation(id) {
-    let url = `/tls/activations/${id}`
+    let endpoint = `/tls/activations/${id}`
     const options = {
       method: 'GET',
     }
-    return this.request(url, options)
+    return this.request(endpoint, options)
   }
 
 }
