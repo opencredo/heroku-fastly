@@ -30,54 +30,54 @@ module.exports = class Fastly{
     })
   }
 
-  createSubscription(domain) {
-    const options = {
-      method: 'POST',
-      body: JSON.stringify({
-        data: {
-          type: 'tls_subscription',
-          attributes: {
-            certificate_authority: 'lets-encrypt',
-          },
-          relationships: {
-            tls_domains: {
-              data: [
-                { type: 'tls_domain', id: domain },
-              ],
-            },
-            tls_configuration: {
-              data: {},
-            },
-          },
-        },
-      }),
-    }
-    return this.request('/tls/subscriptions', options)
-  }
+  // createSubscription(domain) {
+  //   const options = {
+  //     method: 'POST',
+  //     body: JSON.stringify({
+  //       data: {
+  //         type: 'tls_subscription',
+  //         attributes: {
+  //           certificate_authority: 'lets-encrypt',
+  //         },
+  //         relationships: {
+  //           tls_domains: {
+  //             data: [
+  //               { type: 'tls_domain', id: domain },
+  //             ],
+  //           },
+  //           tls_configuration: {
+  //             data: {},
+  //           },
+  //         },
+  //       },
+  //     }),
+  //   }
+  //   return this.request('/tls/subscriptions', options)
+  // }
 
-  getSubscription(id) {
-    let endpoint = `/tls/subscriptions/${id}?include=tls_authorizations`
-    const options = {
-      method: 'GET',
-    }
-    return this.request(endpoint, options)
-  }
+  // getSubscription(id) {
+  //   let endpoint = `/tls/subscriptions/${id}?include=tls_authorizations`
+  //   const options = {
+  //     method: 'GET',
+  //   }
+  //   return this.request(endpoint, options)
+  // }
 
-  getSubscriptions() {
-    let endpoint = '/tls/subscriptions?include=tls_authorizations'
-    const options = {
-      method: 'GET',
-    }
-    return this.request(endpoint, options)
-  }
+  // getSubscriptions() {
+  //   let endpoint = '/tls/subscriptions?include=tls_authorizations'
+  //   const options = {
+  //     method: 'GET',
+  //   }
+  //   return this.request(endpoint, options)
+  // }
 
-  deleteSubscription(id) {
-    let endpoint = `/tls/subscriptions/${id}`
-    const options = {
-      method: 'DELETE',
-    }
-    return this.request(endpoint, options)
-  }
+  // deleteSubscription(id) {
+  //   let endpoint = `/tls/subscriptions/${id}`
+  //   const options = {
+  //     method: 'DELETE',
+  //   }
+  //   return this.request(endpoint, options)
+  // }
 
   getDomains() {
     let endpoint = '/tls/domains?include=tls_activations,tls_subscriptions.tls_authorizations,tls_subscriptions'
@@ -87,12 +87,12 @@ module.exports = class Fastly{
     return this.request(endpoint, options)
   }
 
-  getActivation(id) {
-    let endpoint = `/tls/activations/${id}`
-    const options = {
-      method: 'GET',
-    }
-    return this.request(endpoint, options)
-  }
+  // getActivation(id) {
+  //   let endpoint = `/tls/activations/${id}`
+  //   const options = {
+  //     method: 'GET',
+  //   }
+  //   return this.request(endpoint, options)
+  // }
 
 }

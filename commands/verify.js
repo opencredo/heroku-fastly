@@ -52,39 +52,45 @@ function verifyFastlyTlsSubscription(apiKey, baseUri, domain) {
 
       const tlsDomain = store.find('tls_domain', domain)
 
-      const state = tlsDomain.tls_subscriptions[0].state
-      const challenges = tlsDomain.tls_subscriptions[0].tls_authorizations[0].challenges
+      if (tlsDomain) {
 
-      if (state === 'issued' || state === 'renewing') {
-        hk.log(`The domain ${domain} is currently in a state of ${state}. It could take up to an hour for the certificate to propagate globally.\n`)
+        const state = tlsDomain.tls_subscriptions[0].state
+        const challenges = tlsDomain.tls_subscriptions[0].tls_authorizations[0].challenges
 
-        hk.log('To use the certificate configure the following CNAME record\n')
-        displayChallenge(challenges, 'managed-http-cname')
+        if (state === 'issued' || state === 'renewing') {
+          hk.log(`The domain ${domain} is currently in a state of ${state}. It could take up to an hour for the certificate to propagate globally.\n`)
 
-        hk.log('As an alternative to using a CNAME record the following A record can be configured\n')
-        displayChallenge(challenges, 'managed-http-a')
+          hk.log('To use the certificate configure the following CNAME record\n')
+          displayChallenge(challenges, 'managed-http-cname')
+
+          hk.log('As an alternative to using a CNAME record the following A record can be configured\n')
+          displayChallenge(challenges, 'managed-http-a')
+        }
+
+        if (state === 'pending' || state === 'processing') {
+          hk.log(`The domain ${domain} is currently in a state of ${state} and the issuing of a certificate may take up to 30 minutes\n`)
+
+          hk.log('To start the domain verification process create a DNS CNAME record with the following values\n')
+          displayChallenge(challenges, 'managed-dns')
+
+          hk.log('Alongside the initial verification record configure the following CNAME record\n')
+          displayChallenge(challenges, 'managed-http-cname')
+
+          hk.log('As an alternative to using a CNAME record the following A record can be configured\n')
+          displayChallenge(challenges, 'managed-http-a')
+        }
+      } else {
+
+        hk.warn(`The domain ${domain} does not support TLS.`)
       }
 
-      if(state === 'pending' || state === 'processing') {
-        hk.log(`The domain ${domain} is currently in a state of ${state} and the issuing of a certificate may take up to 30 minutes\n`)
-
-        hk.log('To start the domain verification process create a DNS CNAME record with the following values\n')
-        displayChallenge(challenges, 'managed-dns')
-
-        hk.log('Alongside the initial verification record configure the following CNAME record\n')
-        displayChallenge(challenges, 'managed-http-cname')
-
-        hk.log('As an alternative to using a CNAME record the following A record can be configured\n')
-        displayChallenge(challenges, 'managed-http-a')
-      }
-
-    }catch (e) {
+    } catch (e) {
 
       hk.error(`Fastly Plugin execution - ${e.name} - ${e.message}`)
       process.exit(1)
     }
 
-  })();
+  })()
 }
 
 function validateAPIKey(apiKey) {
@@ -99,7 +105,7 @@ function displayChallenge(challenges, type) {
 
   for (var i = 0; i < challenges.length; i++) {
     let challenge = challenges[i]
-    if(challenge.type === type){
+    if (challenge.type === type) {
       hk.log(`DNS Record Type: ${challenge.record_type}`)
       hk.log(`DNS Record Name: ${challenge.record_name}`)
       hk.log(`DNS Record value(s): ${challenge.values.join(', ')}\n`)
