@@ -39,6 +39,8 @@
     "co": "^4.6.0",
     "fastly": "^2.2.1",
     "heroku-cli-util": "^8.0.10",
+    "jsonapi-datastore": "^0.4.0-beta",
+    "node-fetch": "^2.6.1",
     "request": "^2.69.0"
   },
   "devDependencies": {
