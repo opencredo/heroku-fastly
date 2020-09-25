@@ -79,6 +79,45 @@ function createFastlyTlsSubscription(apiKey, baseUri, domain) {
       const store = new JsonApiDataStore()
 
       const payload = await api.createSubscription(domain)
+
+      let subscription = store.sync(payload)
+      let state = subscription.state
+      let challenges = subscription.tls_authorizations[0].challenges
+
+      if (state === 'issued' || state === 'renewing') {
+        hk.log(
+          `The domain ${domain} is currently in a state of ${state}. It could take up to an hour for the certificate to propagate globally.\n`
+        )
+
+        hk.log('To use the certificate configure the following CNAME record\n')
+        displayChallenge(challenges, 'managed-http-cname')
+
+        hk.log(
+          'As an alternative to using a CNAME record the following A record can be configured\n'
+        )
+        displayChallenge(challenges, 'managed-http-a')
+      }
+
+      if (state === 'pending' || state === 'processing') {
+        hk.log(
+          `The domain ${domain} is currently in a state of ${state} and the issuing of a certificate may take up to 30 minutes\n`
+        )
+
+        hk.log(
+          'To start the domain verification process create a DNS CNAME record with the following values\n'
+        )
+        displayChallenge(challenges, 'managed-dns')
+
+        hk.log(
+          'Alongside the initial verification record configure the following CNAME record\n'
+        )
+        displayChallenge(challenges, 'managed-http-cname')
+
+        hk.log(
+          'As an alternative to using a CNAME record the following A record can be configured\n'
+        )
+        displayChallenge(challenges, 'managed-http-a')
+      }
     } catch (error) {
       hk.error(
         `Fastly Plugin execution error - ${error.name} - ${error.message}`
@@ -219,4 +258,15 @@ function processError(status, statusText, data) {
 
   hk.error(errorMessage.trim())
   process.exit(1)
+}
+
+function displayChallenge(challenges, type) {
+  for (var i = 0; i < challenges.length; i++) {
+    let challenge = challenges[i]
+    if (challenge.type === type) {
+      hk.log(`DNS Record Type: ${challenge.record_type}`)
+      hk.log(`DNS Record Name: ${challenge.record_name}`)
+      hk.log(`DNS Record value(s): ${challenge.values.join(', ')}\n`)
+    }
+  }
 }
