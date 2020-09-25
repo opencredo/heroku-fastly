@@ -69,7 +69,7 @@ function validateAPIKey(apiKey) {
 }
 
 function createFastlyTlsSubscription(apiKey, baseUri, domain) {
-  ;(async () => {
+  (async () => {
     try {
       const api = new Fastly({
         baseUri: baseUri,
@@ -128,15 +128,7 @@ function createFastlyTlsSubscription(apiKey, baseUri, domain) {
 }
 
 function deleteFastlyTlsSubscription(apiKey, baseUri, domain) {
-  const options = {
-    headers: {
-      Accept: 'application/vnd.api+json',
-      'Content-Type': ['application/vnd.api+json'],
-      'Fastly-Key': apiKey,
-    },
-  }
-
-  ;(async () => {
+  (async () => {
     try {
       const api = new Fastly({
         baseUri: baseUri,
@@ -184,61 +176,6 @@ function deleteFastlyTlsSubscription(apiKey, baseUri, domain) {
       process.exit(1)
     }
   })()
-}
-
-function processCreateResponse(data, domain) {
-  let acmeChallenge = jp.query(
-    data,
-    "$.included[*].attributes.challenges[?(@.type == 'managed-dns')]"
-  )[0]
-  let cnameChallenge = jp.query(
-    data,
-    "$.included[*].attributes.challenges[?(@.type == 'managed-http-cname')]"
-  )[0]
-  let aChallenge = jp.query(
-    data,
-    "$.included[*].attributes.challenges[?(@.type == 'managed-http-a')]"
-  )[0]
-
-  hk.styledHeader(
-    `Domain ${domain} has been queued for TLS certificate addition. This may take a few minutes.\n`
-  )
-  hk.styledHeader(
-    `To start the domain verification process create a DNS ${acmeChallenge.record_type} record.\n`
-  )
-  hk.log(
-    `${acmeChallenge.record_type} ${acmeChallenge.record_name} ${acmeChallenge.values[0]}\n`
-  )
-
-  hk.styledHeader(
-    'Alongside the initial verification record either the following CNAME and/or A records are required.\n'
-  )
-  hk.log(
-    `${cnameChallenge.record_type} ${cnameChallenge.record_name} ${cnameChallenge.values[0]}\n`
-  )
-  hk.log(
-    `${aChallenge.record_type} ${aChallenge.record_name} ${aChallenge.values[0]}, ${aChallenge.values[1]}, ${aChallenge.values[2]}, ${aChallenge.values[3]}`
-  )
-}
-
-function processDeleteResponse(domain) {
-  hk.styledHeader(
-    `Domain ${domain} queued for TLS removal. This domain will no longer support TLS`
-  )
-}
-
-function processError(status, statusText, data) {
-  let errorMessage = `Fastly API request Error - code: ${status} ${statusText}\n`
-
-  if (data != null) {
-    let errors = data.errors
-    for (var i = 0; i < errors.length; i++) {
-      errorMessage += `${errors[i].title} - ${errors[i].detail}\n`
-    }
-  }
-
-  hk.error(errorMessage.trim())
-  process.exit(1)
 }
 
 function displayChallenge(challenges, type) {
