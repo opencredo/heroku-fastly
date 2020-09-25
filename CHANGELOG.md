@@ -2,7 +2,7 @@
 
 ### Changed
 
-- ⬆️  Fixed security problems in dependencies
+- ⬆️ Fixed security problems in dependencies
 
 ## 2.0.1
 

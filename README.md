@@ -2,9 +2,8 @@
 
 Heroku CLI plugin for interacting with fastly configuration.
 
-
-
 # Installation
+
 Install the heroku-fastly plugin using the `heroku plugins` command. More details are available in Heroku's [Devcenter](https://devcenter.heroku.com/articles/using-cli-plugins).
 
 ```
@@ -12,9 +11,13 @@ heroku plugins:install @fastly/heroku-plugin
 ```
 
 # Usage
+
 The CLI Plugin includes the commands: `tls`, `verify`, and `purge`.
-****
+
+---
+
 ## TLS and Verify
+
 To add TLS to a domain your pricing plan must include a TLS domain and the domain must be configured in the active version of your Fastly Service.
 The process involves creating the TLS Domain, verifying ownership of your domain, and checking the verification status of your domain. Usage:
 
@@ -27,20 +30,24 @@ To add TLS/SSL to a custom domain:
 ```
 heroku fastly:tls www.example.org --app my-fast-app
 ```
-The output of add TLS/SSL command will provide the required DNS record values that need to be 
-add to your DNS provider configuration.  These include the acme challenge as well as A/CNAME record entries.
+
+The output of add TLS/SSL command will provide the required DNS record values that need to be
+add to your DNS provider configuration. These include the acme challenge as well as A/CNAME record entries.
 
 Verifies the state of the add TLS/SSL request.
+
 ```
 heroku fastly:verify www.example.org
 ```
 
 To remove TLS/SSL from a custom domain, include the the `-d` flag:
+
 ```
 heroku fastly:tls -d www.example.org --app my-fast-app
 ```
 
 ## Purge
+
 Issue a surrogate key purge or purge all. For reference, see the [Purge API docs](https://docs.fastly.com/api/purge). Usage:
 
 ```
@@ -66,21 +73,22 @@ heroku fastly:purge my-surrogate-key --soft --app my-fast-app
 ```
 
 # Development
+
 Clone the repo and run `npm install` to install dependencies.
 
 Further detail on building Heroku CLI plugins is available in the [devcenter](https://devcenter.heroku.com/articles/developing-cli-plugins).
 
-* Clone this repo.
-* `cd` into `heroku-fastly` repo
-* Run `npm install`.
-* Run `heroku plugins:link`. 
-* You can make sure this is working by running `heroku plugins`, will return something like:
+- Clone this repo.
+- `cd` into `heroku-fastly` repo
+- Run `npm install`.
+- Run `heroku plugins:link`.
+- You can make sure this is working by running `heroku plugins`, will return something like:
 
 ```
 heroku-fastly 1.0.7 (link) /Users/your-path/heroku-fastly
 ```
 
-* Test `tls` command. Run `heroku fastly:tls www.example.org --app my-fast-app`. This command will return something like:
+- Test `tls` command. Run `heroku fastly:tls www.example.org --app my-fast-app`. This command will return something like:
 
 ```
 === Domain www.example.org has been queued for TLS certificate addition. This may take a few minutes.
@@ -94,9 +102,9 @@ CNAME _acme-challenge.www.example.org lja6px7qnjrx5dgqd7.fastly-validations.com
 CNAME www.example.org j.sni.global.fastly.net
 
 A www.example.org 151.101.2.132, 151.101.66.132, 151.101.130.132, 151.101.194.132
- ```
+```
 
-* Test `verify` command. Run `heroku fastly:verify www.example.org`, will return something like: 
+- Test `verify` command. Run `heroku fastly:verify www.example.org`, will return something like:
 
 ```
  (node:55920) [DEP0066] DeprecationWarning: OutgoingMessage.prototype._headers is deprecated
@@ -104,13 +112,14 @@ A www.example.org 151.101.2.132, 151.101.66.132, 151.101.130.132, 151.101.194.13
  The issuing of a certificate may take up to 30 minutes.  In the mean time please confirm your DNS records are configured with your DNS provider for fastlydev.thinkcheesy.com
 ```
 
-* Test `purge` command. Run `heroku fastly:purge --all --app my-fast-app`, will return something like:
+- Test `purge` command. Run `heroku fastly:purge --all --app my-fast-app`, will return something like:
 
 ```
 { status: 'ok' }
 ```
 
 ## Testing
+
 Tests can be run with `npm test`.
 
 ## Publishing
@@ -124,9 +133,9 @@ Tests can be run with `npm test`.
   branch after pulling all changes in from `github`.
 
 ## Contact us
+
 Have an issue? Please send an email to support@fastly.com.
 
 ## Contributing
+
 Want to see new functionality? Please open a pull request.
-
-
