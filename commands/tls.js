@@ -50,10 +50,24 @@ Usage: \n\
 
       validateAPIKey(apiKey)
 
+      const api = new Fastly({
+        baseUri: baseUri,
+        apiKey: apiKey,
+      })
+
       if (context.flags.delete) {
-        deleteFastlyTlsSubscription(apiKey, baseUri, domain)
+        api
+          .getDomains()
+          .then(locateSubscriptionDetails(domain))
+          .then(deleteActivation(api, domain))
+          .then(deleteSubscription(api, domain))
+          .catch(renderFastlyError())
       } else {
-        createFastlyTlsSubscription(apiKey, baseUri, domain)
+        api
+          .getDomains()
+          .then(locateSubscriptionDetails(domain))
+          .then(createSubscription(api, domain))
+          .catch(renderFastlyError())
       }
     })
   }),
@@ -68,114 +82,66 @@ function validateAPIKey(apiKey) {
   }
 }
 
-function createFastlyTlsSubscription(apiKey, baseUri, domain) {
-  (async () => {
-    try {
-      const api = new Fastly({
-        baseUri: baseUri,
-        apiKey: apiKey,
-      })
-
-      const store = new JsonApiDataStore()
-
-      const payload = await api.createSubscription(domain)
-
-      let subscription = store.sync(payload)
-      let state = subscription.state
-      let challenges = subscription.tls_authorizations[0].challenges
-
-      if (state === 'issued' || state === 'renewing') {
-        hk.log(
-          `The domain ${domain} is currently in a state of ${state}. It could take up to an hour for the certificate to propagate globally.\n`
-        )
-
-        hk.log('To use the certificate configure the following CNAME record\n')
-        displayChallenge(challenges, 'managed-http-cname')
-
-        hk.log(
-          'As an alternative to using a CNAME record the following A record can be configured\n'
-        )
-        displayChallenge(challenges, 'managed-http-a')
-      }
-
-      if (state === 'pending' || state === 'processing') {
-        hk.log(
-          `The domain ${domain} is currently in a state of ${state} and the issuing of a certificate may take up to 30 minutes\n`
-        )
-
-        hk.log(
-          'To start the domain verification process create a DNS CNAME record with the following values\n'
-        )
-        displayChallenge(challenges, 'managed-dns')
-
-        hk.log(
-          'Alongside the initial verification record configure the following CNAME record\n'
-        )
-        displayChallenge(challenges, 'managed-http-cname')
-
-        hk.log(
-          'As an alternative to using a CNAME record the following A record can be configured\n'
-        )
-        displayChallenge(challenges, 'managed-http-a')
-      }
-    } catch (error) {
-      hk.error(
-        `Fastly Plugin execution error - ${error.name} - ${error.message}`
-      )
-      process.exit(1)
-    }
-  })()
+function renderFastlyError() {
+  return (err) => {
+    hk.error(`Fastly Plugin execution error - ${err.name} - ${err.message}`)
+    process.exit(1)
+  }
 }
 
-function deleteFastlyTlsSubscription(apiKey, baseUri, domain) {
-  (async () => {
-    try {
-      const api = new Fastly({
-        baseUri: baseUri,
-        apiKey: apiKey,
-      })
+function createSubscription(api, domain) {
+  return (data) => {
+    if (!data.subscriptionId) {
+      api
+        .createSubscription(domain)
+        .then((data) => {
+          const store = new JsonApiDataStore()
+          let subscription = store.sync(data)
+          let state = subscription.state
+          let challenges = subscription.tls_authorizations[0].challenges
 
-      const store = new JsonApiDataStore()
+          if (state === 'issued' || state === 'renewing') {
+            hk.log(
+              `The domain ${domain} is currently in a state of ${state}. It could take up to an hour for the certificate to propagate globally.\n`
+            )
 
-      const payload = await api.getDomains()
-      const domains = store.sync(payload)
+            hk.log(
+              'To use the certificate configure the following CNAME record\n'
+            )
+            displayChallenge(challenges, 'managed-http-cname')
 
-      hk.debug(
-        `Located ${domains.length} tls domains linked to the fastly service`
-      )
+            hk.log(
+              'As an alternative to using a CNAME record the following A record can be configured\n'
+            )
+            displayChallenge(challenges, 'managed-http-a')
+          }
 
-      const tlsDomain = store.find('tls_domain', domain)
+          if (state === 'pending' || state === 'processing') {
+            hk.log(
+              `The domain ${domain} is currently in a state of ${state} and the issuing of a certificate may take up to 30 minutes\n`
+            )
 
-      if (tlsDomain) {
-        let subscriptions = tlsDomain.tls_subscriptions
+            hk.log(
+              'To start the domain verification process create a DNS CNAME record with the following values\n'
+            )
+            displayChallenge(challenges, 'managed-dns')
 
-        let activations = tlsDomain.tls_activations
+            hk.log(
+              'Alongside the initial verification record configure the following CNAME record\n'
+            )
+            displayChallenge(challenges, 'managed-http-cname')
 
-        if (activations.length > 0) {
-          let activationId = activations[0].id
-          await api.deleteActivation(activationId)
-          hk.log(`TLS subscription for domain ${domain} has been deactivated`)
-        } else {
-          hk.log(`TLS subscription for domain ${domain} was not active`)
-        }
-
-        if (subscriptions.length > 0) {
-          let subscriptionId = subscriptions[0].id
-          await api.deleteSubscription(subscriptionId)
-          hk.log(`TLS subscription for domain ${domain} has been removed`)
-        }
-
-        hk.log('This domain will no longer support TLS')
-      } else {
-        hk.warn(`Domain ${domain} does not support TLS.`)
-      }
-    } catch (error) {
-      hk.error(
-        `Fastly Plugin execution error - ${error.name} - ${error.message}`
-      )
-      process.exit(1)
+            hk.log(
+              'As an alternative to using a CNAME record the following A record can be configured\n'
+            )
+            displayChallenge(challenges, 'managed-http-a')
+          }
+        })
+        .catch((err) => {})
+    } else {
+      hk.error(`The domain ${domain} currently has a TLS subscription`)
     }
-  })()
+  }
 }
 
 function displayChallenge(challenges, type) {
@@ -186,5 +152,68 @@ function displayChallenge(challenges, type) {
       hk.log(`DNS Record Name: ${challenge.record_name}`)
       hk.log(`DNS Record value(s): ${challenge.values.join(', ')}\n`)
     }
+  }
+}
+
+function deleteActivation(api, domain) {
+  return (data) => {
+    if (data.activationId) {
+      api
+        .deleteActivation(data.activationId)
+        .then(() => {
+          hk.log(`TLS subscription for domain ${domain} has been deactivated`)
+        })
+        .then(() => {
+          hk.log(`TLS subscription for domain ${domain} was not active`)
+        })
+        .catch((err) => {})
+    }
+    return data
+  }
+}
+
+function deleteSubscription(api, domain) {
+  return (data) => {
+    if (data.subscriptionId) {
+      api
+        .deleteSubscription(data.subscriptionId)
+        .then(() => {
+          hk.log(`TLS subscription for domain ${domain} has been removed`)
+        })
+        .then(() => {
+          hk.log('This domain will no longer support TLS')
+        })
+        .catch((err) => {})
+    } else {
+      hk.log(`The domain ${domain} does not support TLS`)
+    }
+  }
+}
+
+function locateSubscriptionDetails(domain) {
+  return (data) => {
+    const store = new JsonApiDataStore()
+    store.sync(data)
+    const tlsDomain = store.find('tls_domain', domain)
+
+    const subDetails = {
+      activationId: null,
+      subscriptionId: null,
+    }
+
+    if (tlsDomain) {
+      let activations = tlsDomain.tls_activations
+      let subscriptions = tlsDomain.tls_subscriptions
+
+      if (activations.length > 0) {
+        subDetails.activationId = activations[0].id
+      }
+
+      if (subscriptions.length > 0) {
+        subDetails.subscriptionId = subscriptions[0].id
+      }
+    }
+
+    return subDetails
   }
 }
