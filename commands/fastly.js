@@ -22,7 +22,11 @@ module.exports = class Fastly {
 
     return fetch(url, config).then((r) => {
       if (r.ok) {
-        return r.json()
+        if (r.status != 204) {
+          return r.json()
+        } else {
+          return {}
+        }
       }
       throw new Error(`Fastly API error - ${url} - ${r.status} ${r.statusText}`)
     })
@@ -67,13 +71,13 @@ module.exports = class Fastly {
   //   return this.request(endpoint, options)
   // }
 
-  // deleteSubscription(id) {
-  //   let endpoint = `/tls/subscriptions/${id}`
-  //   const options = {
-  //     method: 'DELETE',
-  //   }
-  //   return this.request(endpoint, options)
-  // }
+  deleteSubscription(id) {
+    let endpoint = `/tls/subscriptions/${id}`
+    const options = {
+      method: 'DELETE',
+    }
+    return this.request(endpoint, options)
+  }
 
   getDomains() {
     let endpoint =
@@ -91,4 +95,12 @@ module.exports = class Fastly {
   //   }
   //   return this.request(endpoint, options)
   // }
+
+  deleteActivation(id) {
+    let endpoint = `/tls/activations/${id}`
+    const options = {
+      method: 'DELETE',
+    }
+    return this.request(endpoint, options)
+  }
 }

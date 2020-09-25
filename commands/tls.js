@@ -138,61 +138,42 @@ function deleteFastlyTlsSubscription(apiKey, baseUri, domain) {
 
   ;(async () => {
     try {
-      // 1. Get a list of domains to locate activation and subscription ids.
-      const domainResponse = await fetch(`${baseUri}/tls/domains`, options)
-      const domainData = await domainResponse.json()
+      const api = new Fastly({
+        baseUri: baseUri,
+        apiKey: apiKey,
+      })
 
-      if (!domainResponse.ok) {
-        processError(
-          domainResponse.status,
-          domainResponse.statusText,
-          domainData
-        )
-      }
+      const store = new JsonApiDataStore()
 
-      let tlsActivationId = jp.query(
-        domainData,
-        `$.data[?(@.id == \'${domain}\')].relationships.tls_activations.data[0].id`
-      )
-      let tlsSubscriptionId = jp.query(
-        domainData,
-        `$.data[?(@.id == \'${domain}\')].relationships.tls_subscriptions.data[0].id`
+      const payload = await api.getDomains()
+      const domains = store.sync(payload)
+
+      hk.debug(
+        `Located ${domains.length} tls domains linked to the fastly service`
       )
 
-      // 2. Delete the activations against the domain.
-      if (tlsActivationId) {
-        options.method = 'DELETE'
-        const activationResponse = await fetch(
-          `${baseUri}/tls/activations/${tlsActivationId}`,
-          options
-        )
+      const tlsDomain = store.find('tls_domain', domain)
 
-        if (!activationResponse.ok) {
-          const activationData = await activationResponse.json()
-          processError(
-            activationResponse.status,
-            activationResponse.statusText,
-            activationData
-          )
-        }
-      } else {
-        hk.warn(`TLS was not activate on domain ${domain}.`)
-      }
+      if (tlsDomain) {
+        let subscriptions = tlsDomain.tls_subscriptions
 
-      // 3. Delete the subscription against the domain.
-      if (tlsSubscriptionId) {
-        options.method = 'DELETE'
-        const response = await fetch(
-          `${baseUri}/tls/subscriptions/${tlsSubscriptionId}`,
-          options
-        )
+        let activations = tlsDomain.tls_activations
 
-        if (!response.ok) {
-          const data = await response.json()
-          processError(response.status, response.statusText, data)
+        if (activations.length > 0) {
+          let activationId = activations[0].id
+          await api.deleteActivation(activationId)
+          hk.log(`TLS subscription for domain ${domain} has been deactivated`)
+        } else {
+          hk.log(`TLS subscription for domain ${domain} was not active`)
         }
 
-        processDeleteResponse(domain)
+        if (subscriptions.length > 0) {
+          let subscriptionId = subscriptions[0].id
+          await api.deleteSubscription(subscriptionId)
+          hk.log(`TLS subscription for domain ${domain} has been removed`)
+        }
+
+        hk.log('This domain will no longer support TLS')
       } else {
         hk.warn(`Domain ${domain} does not support TLS.`)
       }
