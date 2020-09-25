@@ -32,6 +32,15 @@ module.exports = class Fastly {
     })
   }
 
+  getDomains() {
+    let endpoint =
+      '/tls/domains?include=tls_activations,tls_subscriptions.tls_authorizations,tls_subscriptions'
+    const options = {
+      method: 'GET',
+    }
+    return this.request(endpoint, options)
+  }
+
   createSubscription(domain) {
     const options = {
       method: 'POST',
@@ -55,49 +64,16 @@ module.exports = class Fastly {
     return this.request('/tls/subscriptions', options)
   }
 
-  // getSubscription(id) {
-  //   let endpoint = `/tls/subscriptions/${id}?include=tls_authorizations`
-  //   const options = {
-  //     method: 'GET',
-  //   }
-  //   return this.request(endpoint, options)
-  // }
-
-  // getSubscriptions() {
-  //   let endpoint = '/tls/subscriptions?include=tls_authorizations'
-  //   const options = {
-  //     method: 'GET',
-  //   }
-  //   return this.request(endpoint, options)
-  // }
-
-  deleteSubscription(id) {
-    let endpoint = `/tls/subscriptions/${id}`
+  deleteActivation(id) {
+    let endpoint = `/tls/activations/${id}`
     const options = {
       method: 'DELETE',
     }
     return this.request(endpoint, options)
   }
 
-  getDomains() {
-    let endpoint =
-      '/tls/domains?include=tls_activations,tls_subscriptions.tls_authorizations,tls_subscriptions'
-    const options = {
-      method: 'GET',
-    }
-    return this.request(endpoint, options)
-  }
-
-  // getActivation(id) {
-  //   let endpoint = `/tls/activations/${id}`
-  //   const options = {
-  //     method: 'GET',
-  //   }
-  //   return this.request(endpoint, options)
-  // }
-
-  deleteActivation(id) {
-    let endpoint = `/tls/activations/${id}`
+  deleteSubscription(id) {
+    let endpoint = `/tls/subscriptions/${id}`
     const options = {
       method: 'DELETE',
     }
