@@ -37,7 +37,7 @@ add to your DNS provider configuration. These include the acme challenge as well
 Verifies the state of the add TLS/SSL request.
 
 ```
-heroku fastly:verify www.example.org
+heroku fastly:verify www.example.org --app my-fast-app
 ```
 
 To remove TLS/SSL from a custom domain, include the the `-d` flag:
@@ -91,25 +91,49 @@ heroku-fastly 1.0.7 (link) /Users/your-path/heroku-fastly
 - Test `tls` command. Run `heroku fastly:tls www.example.org --app my-fast-app`. This command will return something like:
 
 ```
-=== Domain www.example.org has been queued for TLS certificate addition. This may take a few minutes.
+The domain www.example.org is currently in a state of pending and the issuing of a certificate may take up to 30 minutes
 
-=== To start the domain verification process create a DNS CNAME record.
+To start the domain verification process create a DNS CNAME record with the following values
 
-CNAME _acme-challenge.www.example.org lja6px7qnjrx5dgqd7.fastly-validations.com
+DNS Record Type: CNAME
+DNS Record Name: _acme-challenge.www.example.org
+DNS Record value(s): pkfsreworlfwh23r66.fastly-validations.com
 
-=== Alongside the initial verification record either the following CNAME and/or A records are required.
+Alongside the initial verification record configure the following CNAME record
 
-CNAME www.example.org j.sni.global.fastly.net
+DNS Record Type: CNAME
+DNS Record Name: www.example.org
+DNS Record value(s): j.sni.global.fastly.net
 
-A www.example.org 151.101.2.132, 151.101.66.132, 151.101.130.132, 151.101.194.132
+As an alternative to using a CNAME record the following A record can be configured
+
+DNS Record Type: A
+DNS Record Name: www.example.org
+DNS Record value(s): 151.101.2.132, 151.101.66.132, 151.101.130.132, 151.101.194.132
 ```
 
-- Test `verify` command. Run `heroku fastly:verify www.example.org`, will return something like:
+- Test `verify` command. Run `heroku fastly:verify www.example.org --app my-fast-app`, will return something like:
 
 ```
- (node:55920) [DEP0066] DeprecationWarning: OutgoingMessage.prototype._headers is deprecated
- === Domain www.example.org TLS subscription state: pending
- The issuing of a certificate may take up to 30 minutes.  In the mean time please confirm your DNS records are configured with your DNS provider for fastlydev.thinkcheesy.com
+ The domain www.example.org is currently in a state of pending and the issuing of a certificate may take up to 30 minutes
+
+ To start the domain verification process create a DNS CNAME record with the following values
+
+ DNS Record Type: CNAME
+ DNS Record Name: _acme-challenge.www.example.org
+ DNS Record value(s): pkfsreworlfwh23r66.fastly-validations.com
+
+ Alongside the initial verification record configure the following CNAME record
+
+ DNS Record Type: CNAME
+ DNS Record Name: www.example.org
+ DNS Record value(s): j.sni.global.fastly.net
+
+ As an alternative to using a CNAME record the following A record can be configured
+
+ DNS Record Type: A
+ DNS Record Name: www.example.org
+ DNS Record value(s): 151.101.2.132, 151.101.66.132, 151.101.130.132, 151.101.194.132
 ```
 
 - Test `purge` command. Run `heroku fastly:purge --all --app my-fast-app`, will return something like:
