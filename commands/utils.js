@@ -9,6 +9,13 @@ function validateAPIKey(apiKey) {
   }
 }
 
+function renderFastlyError() {
+  return (err) => {
+    hk.error(`Fastly Plugin execution error - ${err.name} - ${err.message}`)
+    process.exit(1)
+  }
+}
+
 function displayChallenge(challenges, type) {
   for (var i = 0; i < challenges.length; i++) {
     let challenge = challenges[i]
@@ -21,4 +28,5 @@ function displayChallenge(challenges, type) {
 }
 
 exports.displayChallenge = displayChallenge
+exports.renderFastlyError = renderFastlyError
 exports.validateAPIKey = validateAPIKey

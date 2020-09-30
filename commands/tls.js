@@ -62,23 +62,16 @@ Usage: \n\
           .then(locateSubscriptionDetails(domain))
           .then(deleteActivation(api, domain))
           .then(deleteSubscription(api, domain))
-          .catch(renderFastlyError())
+          .catch(utils.renderFastlyError())
       } else {
         api
           .getDomains()
           .then(locateSubscriptionDetails(domain))
           .then(createSubscription(api, domain))
-          .catch(renderFastlyError())
+          .catch(utils.renderFastlyError())
       }
     })
   }),
-}
-
-function renderFastlyError() {
-  return (err) => {
-    hk.error(`Fastly Plugin execution error - ${err.name} - ${err.message}`)
-    process.exit(1)
-  }
 }
 
 function createSubscription(api, domain) {
