@@ -1,7 +1,7 @@
 'use strict'
 
 require('jest-fetch-mock').enableMocks()
-const Fastly = require('./fastly.js')
+const apiClient = require('./api')
 
 describe('interaction with fastly api', () => {
   beforeEach(() => {
@@ -14,7 +14,7 @@ describe('interaction with fastly api', () => {
     let expectedTestDomain = 'www.mytestdomain.com'
     let expectedFastlyApiKey = 'XXXXXXXXX'
 
-    let api = new Fastly({
+    let api = new apiClient({
       apiKey: `${expectedFastlyApiKey}`,
     })
 

@@ -1,7 +1,7 @@
 'use strict'
 const hk = require('heroku-cli-util')
 const co = require('co')
-const Fastly = require('./fastly.js')
+const apiClient = require('./api')
 const utils = require('./utils')
 
 const JsonApiDataStore = require('jsonapi-datastore').JsonApiDataStore
@@ -51,7 +51,7 @@ Usage: \n\
 
       utils.validateAPIKey(apiKey)
 
-      const api = new Fastly({
+      const api = new apiClient({
         baseUri: baseUri,
         apiKey: apiKey,
       })
@@ -134,7 +134,7 @@ function createSubscription(api, domain) {
           process.exit(1)
         })
     } else {
-      hk.error(`The domain ${domain} currently has a TLS subscription`)
+      hk.error(`The domain ${domain} already has a TLS subscription`)
     }
   }
 }

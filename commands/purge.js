@@ -1,6 +1,7 @@
 'use strict'
 const hk = require('heroku-cli-util')
 const co = require('co')
+const fastly = require('fastly')
 
 module.exports = {
   topic: 'fastly',
@@ -29,10 +30,10 @@ module.exports = {
 
     return co(function* () {
       let config = yield heroku.get(`/apps/${context.app}/config-vars`)
-      const fastly = require('fastly')(config.FASTLY_API_KEY)
+      const api = fastly(config.FASTLY_API_KEY)
 
       if (context.flags.all) {
-        fastly.purgeAll(config.FASTLY_SERVICE_ID, function (err, obj) {
+        api.purgeAll(config.FASTLY_SERVICE_ID, function (err, obj) {
           if (err) {
             hk.error(err)
           } else {
@@ -43,7 +44,7 @@ module.exports = {
 
       if (context.args.key) {
         if (context.flags.soft) {
-          fastly.softPurgeKey(
+          api.softPurgeKey(
             config.FASTLY_SERVICE_ID,
             context.args.key,
             function (err, obj) {
@@ -55,7 +56,7 @@ module.exports = {
             }
           )
         } else {
-          fastly.purgeKey(config.FASTLY_SERVICE_ID, context.args.key, function (
+          api.purgeKey(config.FASTLY_SERVICE_ID, context.args.key, function (
             err,
             obj
           ) {

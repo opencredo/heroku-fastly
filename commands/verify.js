@@ -1,7 +1,7 @@
 'use strict'
 const hk = require('heroku-cli-util')
 const co = require('co')
-const Fastly = require('./fastly.js')
+const apiClient = require('./api')
 const utils = require('./utils')
 
 const JsonApiDataStore = require('jsonapi-datastore').JsonApiDataStore
@@ -48,7 +48,7 @@ module.exports = {
 function verifyFastlyTlsSubscription(apiKey, baseUri, domain) {
   ;(async () => {
     try {
-      const api = new Fastly({
+      const api = new apiClient({
         baseUri: baseUri,
         apiKey: apiKey,
       })
