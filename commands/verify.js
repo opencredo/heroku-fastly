@@ -2,6 +2,7 @@
 const hk = require('heroku-cli-util')
 const co = require('co')
 const Fastly = require('./fastly.js')
+const utils = require('./utils')
 
 const JsonApiDataStore = require('jsonapi-datastore').JsonApiDataStore
 
@@ -37,7 +38,7 @@ module.exports = {
       let apiKey = context.flags.api_key || config.FASTLY_API_KEY
       let domain = context.args.domain
 
-      validateAPIKey(apiKey)
+      utils.validateAPIKey(apiKey)
 
       verifyFastlyTlsSubscription(apiKey, baseUri, domain)
     })
@@ -76,12 +77,12 @@ function verifyFastlyTlsSubscription(apiKey, baseUri, domain) {
           hk.log(
             'To use the certificate configure the following CNAME record\n'
           )
-          displayChallenge(challenges, 'managed-http-cname')
+          utils.displayChallenge(challenges, 'managed-http-cname')
 
           hk.log(
             'As an alternative to using a CNAME record the following A record can be configured\n'
           )
-          displayChallenge(challenges, 'managed-http-a')
+          utils.displayChallenge(challenges, 'managed-http-a')
         }
 
         if (state === 'pending' || state === 'processing') {
@@ -92,17 +93,17 @@ function verifyFastlyTlsSubscription(apiKey, baseUri, domain) {
           hk.log(
             'To start the domain verification process create a DNS CNAME record with the following values\n'
           )
-          displayChallenge(challenges, 'managed-dns')
+          utils.displayChallenge(challenges, 'managed-dns')
 
           hk.log(
             'Alongside the initial verification record configure the following CNAME record\n'
           )
-          displayChallenge(challenges, 'managed-http-cname')
+          utils.displayChallenge(challenges, 'managed-http-cname')
 
           hk.log(
             'As an alternative to using a CNAME record the following A record can be configured\n'
           )
-          displayChallenge(challenges, 'managed-http-a')
+          utils.displayChallenge(challenges, 'managed-http-a')
         }
       } else {
         hk.warn(`The domain ${domain} does not support TLS.`)
@@ -112,24 +113,4 @@ function verifyFastlyTlsSubscription(apiKey, baseUri, domain) {
       process.exit(1)
     }
   })()
-}
-
-function validateAPIKey(apiKey) {
-  if (!apiKey) {
-    hk.error(
-      'config var FASTLY_API_KEY not found! The Fastly add-on is required to configure TLS. Install Fastly at https://elements.heroku.com/addons/fastly'
-    )
-    process.exit(1)
-  }
-}
-
-function displayChallenge(challenges, type) {
-  for (var i = 0; i < challenges.length; i++) {
-    let challenge = challenges[i]
-    if (challenge.type === type) {
-      hk.log(`DNS Record Type: ${challenge.record_type}`)
-      hk.log(`DNS Record Name: ${challenge.record_name}`)
-      hk.log(`DNS Record value(s): ${challenge.values.join(', ')}\n`)
-    }
-  }
 }
