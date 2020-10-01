@@ -1,7 +1,7 @@
 'use strict'
 
 require('jest-fetch-mock').enableMocks()
-const apiClient = require('./api')
+const apiClient = require('../commands/api')
 
 describe('interaction with fastly api', () => {
   beforeEach(() => {
