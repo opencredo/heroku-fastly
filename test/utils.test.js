@@ -1,6 +1,8 @@
 'use strict'
 
 const utils = require('../commands/utils')
+const hk = require('heroku-cli-util')
+var mockProcess = require('jest-mock-process')
 
 describe('interaction with utils functions', () => {
   const consoleSpy = jest.spyOn(console, 'log')
@@ -88,5 +90,30 @@ describe('interaction with utils functions', () => {
     expect(consoleSpy).toHaveBeenCalledWith(
       'DNS Record value(s): 151.101.2.132, 151.101.66.132\n'
     )
+  })
+
+  it('renders error message and exits when no API key is supplied', async () => {
+    const mockExit = mockProcess.mockProcessExit()
+    const herokuErrorSpy = jest.spyOn(hk, 'error')
+    herokuErrorSpy.mockReset()
+
+    utils.validateAPIKey(null)
+
+    expect(herokuErrorSpy).toHaveBeenCalledTimes(1)
+    expect(herokuErrorSpy).toHaveBeenCalledWith(
+      'config var FASTLY_API_KEY not found! The Fastly add-on is required to configure TLS. Install Fastly at https://elements.heroku.com/addons/fastly'
+    )
+    expect(mockExit).toBeCalledWith(1)
+  })
+
+  it('does not render error or exits when a API key is supplied', async () => {
+    const mockExit = mockProcess.mockProcessExit()
+    const herokuErrorSpy = jest.spyOn(hk, 'error')
+    herokuErrorSpy.mockReset()
+
+    utils.validateAPIKey('XXXXXXXXX')
+
+    expect(herokuErrorSpy).not.toBeCalled()
+    expect(mockExit).not.toBeCalled()
   })
 })
