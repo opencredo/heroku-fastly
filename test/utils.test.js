@@ -112,4 +112,16 @@ describe('interaction with utils functions', () => {
     expect(herokuErrorSpy).not.toBeCalled()
     expect(mockExit).not.toBeCalled()
   })
+
+  it('renders error as expected', async () => {
+    const errFunc = utils.renderFastlyError()
+
+    errFunc({ name: 'test error', message: 'test error message' })
+
+    expect(herokuErrorSpy).toBeCalledTimes(1)
+    expect(herokuErrorSpy).toBeCalledWith(
+      'Fastly Plugin execution error - test error - test error message'
+    )
+    expect(mockExit).toBeCalledTimes(1)
+  })
 })
