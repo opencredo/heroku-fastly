@@ -5,10 +5,14 @@ const hk = require('heroku-cli-util')
 var mockProcess = require('jest-mock-process')
 
 describe('interaction with utils functions', () => {
-  const consoleSpy = jest.spyOn(console, 'log')
+  const herokuErrorSpy = jest.spyOn(hk, 'error')
+  const mockExit = mockProcess.mockProcessExit()
+  const mockLog = mockProcess.mockConsoleLog()
 
   beforeEach(() => {
-    consoleSpy.mockReset()
+    mockLog.mockReset()
+    herokuErrorSpy.mockReset()
+    mockExit.mockReset()
   })
 
   const testChallenges = [
@@ -40,12 +44,12 @@ describe('interaction with utils functions', () => {
   it('confirm managed-dns challenge renders correctly', async () => {
     utils.displayChallenge(testChallenges, 'managed-dns')
 
-    expect(consoleSpy).toHaveBeenCalledTimes(3)
-    expect(consoleSpy).toHaveBeenCalledWith('DNS Record Type: CNAME')
-    expect(consoleSpy).toHaveBeenCalledWith(
+    expect(mockLog).toHaveBeenCalledTimes(3)
+    expect(mockLog).toHaveBeenCalledWith('DNS Record Type: CNAME')
+    expect(mockLog).toHaveBeenCalledWith(
       'DNS Record Name: _acme-challenge.www.example.org'
     )
-    expect(consoleSpy).toHaveBeenCalledWith(
+    expect(mockLog).toHaveBeenCalledWith(
       'DNS Record value(s): dvxzuc4govtr3juagj.fastly-validations.com\n'
     )
   })
@@ -53,10 +57,10 @@ describe('interaction with utils functions', () => {
   it('confirm managed-http-cname challenge renders correctly', async () => {
     utils.displayChallenge(testChallenges, 'managed-http-cname')
 
-    expect(consoleSpy).toHaveBeenCalledTimes(3)
-    expect(consoleSpy).toHaveBeenCalledWith('DNS Record Type: CNAME')
-    expect(consoleSpy).toHaveBeenCalledWith('DNS Record Name: www.example.org')
-    expect(consoleSpy).toHaveBeenCalledWith(
+    expect(mockLog).toHaveBeenCalledTimes(3)
+    expect(mockLog).toHaveBeenCalledWith('DNS Record Type: CNAME')
+    expect(mockLog).toHaveBeenCalledWith('DNS Record Name: www.example.org')
+    expect(mockLog).toHaveBeenCalledWith(
       'DNS Record value(s): j.sni.global.fastly.net\n'
     )
   })
@@ -64,10 +68,10 @@ describe('interaction with utils functions', () => {
   it('confirm managed-http-a challenge renders correctly', async () => {
     utils.displayChallenge(testChallenges, 'managed-http-a')
 
-    expect(consoleSpy).toHaveBeenCalledTimes(3)
-    expect(consoleSpy).toHaveBeenCalledWith('DNS Record Type: A')
-    expect(consoleSpy).toHaveBeenCalledWith('DNS Record Name: www.example.org')
-    expect(consoleSpy).toHaveBeenCalledWith(
+    expect(mockLog).toHaveBeenCalledTimes(3)
+    expect(mockLog).toHaveBeenCalledWith('DNS Record Type: A')
+    expect(mockLog).toHaveBeenCalledWith('DNS Record Name: www.example.org')
+    expect(mockLog).toHaveBeenCalledWith(
       'DNS Record value(s): 151.101.2.132, 151.101.66.132, 151.101.130.132, 151.101.194.132\n'
     )
   })
@@ -84,19 +88,15 @@ describe('interaction with utils functions', () => {
 
     utils.displayChallenge(challenges, 'managed-http-a')
 
-    expect(consoleSpy).toHaveBeenCalledTimes(3)
-    expect(consoleSpy).toHaveBeenCalledWith('DNS Record Type: A')
-    expect(consoleSpy).toHaveBeenCalledWith('DNS Record Name: www.example.org')
-    expect(consoleSpy).toHaveBeenCalledWith(
+    expect(mockLog).toHaveBeenCalledTimes(3)
+    expect(mockLog).toHaveBeenCalledWith('DNS Record Type: A')
+    expect(mockLog).toHaveBeenCalledWith('DNS Record Name: www.example.org')
+    expect(mockLog).toHaveBeenCalledWith(
       'DNS Record value(s): 151.101.2.132, 151.101.66.132\n'
     )
   })
 
   it('renders error message and exits when no API key is supplied', async () => {
-    const mockExit = mockProcess.mockProcessExit()
-    const herokuErrorSpy = jest.spyOn(hk, 'error')
-    herokuErrorSpy.mockReset()
-
     utils.validateAPIKey(null)
 
     expect(herokuErrorSpy).toHaveBeenCalledTimes(1)
@@ -107,10 +107,6 @@ describe('interaction with utils functions', () => {
   })
 
   it('does not render error or exits when a API key is supplied', async () => {
-    const mockExit = mockProcess.mockProcessExit()
-    const herokuErrorSpy = jest.spyOn(hk, 'error')
-    herokuErrorSpy.mockReset()
-
     utils.validateAPIKey('XXXXXXXXX')
 
     expect(herokuErrorSpy).not.toBeCalled()
